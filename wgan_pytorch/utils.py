@@ -92,10 +92,10 @@ def get_model_params(model_name):
 
 
 urls_map = {
-  "d-fmnist": "https://github.com/changyu98/models/raw/master/pytorch/gan/d-fmnist-9c026cb2.pth",
-  "d-mnist": "https://github.com/changyu98/models/raw/master/pytorch/gan/d-mnist-21dc2b92.pth",
-  "g-fmnist": "https://github.com/changyu98/models/raw/master/pytorch/gan/g-fmnist-d962591f.pth",
-  "g-mnist": "https://github.com/changyu98/models/raw/master/pytorch/gan/g-mnist-7801c655.pth",
+  "d-fmnist": "https://github.com/changyu98/models/raw/master/pytorch/wgan/d-fmnist-c463cc02.pth",
+  "d-mnist": "https://github.com/changyu98/models/raw/master/pytorch/wgan/d-mnist-3864aa92.pth",
+  "g-fmnist": "https://github.com/changyu98/models/raw/master/pytorch/wgan/g-fmnist-528f6448.pth",
+  "g-mnist": "https://github.com/changyu98/models/raw/master/pytorch/wgan/g-mnist-01b4133a.pth",
 }
 
 
