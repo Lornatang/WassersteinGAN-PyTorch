@@ -52,7 +52,7 @@ parser.add_argument('-d', '--discriminator-arch', metavar='STR',
                     help='discriminator model architecture')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=800, type=int, metavar='N',
+parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -322,7 +322,7 @@ def train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, a
     D_G_z1 = fake_output.mean().item()
 
     # Add the gradients from the all-real and all-fake batches
-    errD = -errD_real + errD_fake
+    errD = errD_real + errD_fake
     # Update D
     optimizerD.step()
 
