@@ -12,20 +12,12 @@
 # limitations under the License.
 # ==============================================================================
 
-"""In recent years, supervised learning with convolutional networks (CNNs) has
-seen huge adoption in computer vision applications. Comparatively, unsupervised
-learning with CNNs has received less attention. In this work we hope to
-help bridge the gap between the success of CNNs for supervised learning and
-unsupervised learning. We introduce a class of CNNs called deep convolutional
-generative adversarial networks (DCGANs), that have certain architectural
-constraints, and demonstrate that they are a strong candidate for unsupervised
-learning. Training on various image datasets, we show convincing evidence that
-our deep convolutional adversarial pair learns a hierarchy of representations
-from object parts to scenes in both the generator and discriminator.
-Additionally, we use the learned features for novel tasks - demonstrating their
-applicability as general image representations.
+"""We introduce a new algorithm named WGAN, an alternative to traditional GAN training.
+In this new model, we show that we can improve the stability of learning, get rid of problems like mode collapse,
+and provide meaningful learning curves useful for debugging and hyperparameter searches. Furthermore,
+we show that the corresponding optimization problem is sound, and provide extensive theoretical work highlighting
+the deep connections to other distances between distributions.
 """
-
 import argparse
 import hashlib
 import os
@@ -38,29 +30,29 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 
+from torch.optim.rmsprop import RMSprop
+
 from wgan_pytorch import Discriminator
 from wgan_pytorch import Generator
-from wgan_pytorch import weights_init
 
-parser = argparse.ArgumentParser(description='PyTorch GAN')
+parser = argparse.ArgumentParser(description='PyTorch Wasserstein GAN')
 parser.add_argument('--dataroot', type=str, default='./data',
                     help='path to datasets')
 parser.add_argument('name', type=str,
-                    help='dataset name. Option: [mnist, fmnist, cifar, imagenet]')
+                    help='dataset name. Option: [mnist, fmnist]')
 parser.add_argument('-g', '--generator-arch', metavar='STR',
                     help='generator model architecture')
 parser.add_argument('-d', '--discriminator-arch', metavar='STR',
                     help='discriminator model architecture')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=25, type=int, metavar='N',
+parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -69,12 +61,16 @@ parser.add_argument('-b', '--batch-size', default=64, type=int,
                     help='mini-batch size (default: 64), this is the total '
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
-parser.add_argument('--lr', type=float, default=0.0002,
-                    help='learning rate. (Default=0.0002)')
+parser.add_argument('--lr', type=float, default=0.00005,
+                    help='learning rate. (Default=0.00005)')
 parser.add_argument('--beta1', type=float, default=0.5,
                     help='beta1 for adam. (Default=0.5)')
 parser.add_argument('--beta2', type=float, default=0.999,
                     help='beta2 for adam. (Default=0.999)')
+parser.add_argument("--n_critic", type=int, default=5,
+                    help="number of training steps for discriminator per iter")
+parser.add_argument("--clip_value", type=float, default=0.01,
+                    help="lower and upper clip value for disc. weights")
 parser.add_argument('-p', '--print-freq', default=100, type=int,
                     metavar='N', help='print frequency (default: 100)')
 parser.add_argument('--netG', default='', type=str, metavar='PATH',
@@ -228,14 +224,8 @@ def main_worker(gpu, ngpus_per_node, args):
     generator = torch.nn.DataParallel(generator).cuda()
     discriminator = torch.nn.DataParallel(discriminator).cuda()
 
-  generator.apply(weights_init)
-  discriminator.apply(weights_init)
-
-  # define loss function (adversarial_loss) and optimizer
-  adversarial_loss = nn.BCELoss().cuda(args.gpu)
-
-  optimizerG = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
-  optimizerD = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
+  optimizerG = RMSprop(generator.parameters(), lr=args.lr)
+  optimizerD = RMSprop(discriminator.parameters(), lr=args.lr)
 
   # optionally resume from a checkpoint
   if args.netG:
@@ -259,33 +249,15 @@ def main_worker(gpu, ngpus_per_node, args):
 
   cudnn.benchmark = True
 
-  if args.name == 'imagenet':
-    # folder dataset
-    dataset = datasets.ImageFolder(root=args.dataroot,
-                                   transform=transforms.Compose([
-                                     transforms.Resize(64),
-                                     transforms.CenterCrop(64),
-                                     transforms.ToTensor(),
-                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                   ]))
-  elif args.name == 'cifar':
-    dataset = datasets.CIFAR10(root=args.dataroot, download=True,
-                               transform=transforms.Compose([
-                                 transforms.Resize(64),
-                                 transforms.ToTensor(),
-                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                               ]))
-  elif args.name == 'mnist':
+  if args.name == 'mnist':
     dataset = datasets.MNIST(root=args.dataroot, download=True,
                              transform=transforms.Compose([
-                               transforms.Resize(64),
                                transforms.ToTensor(),
                                transforms.Normalize((0.5,), (0.5,)),
                              ]))
   elif args.name == 'fmnist':
     dataset = datasets.FashionMNIST(root=args.dataroot, download=True,
                                     transform=transforms.Compose([
-                                      transforms.Resize(64),
                                       transforms.ToTensor(),
                                       transforms.Normalize((0.5,), (0.5,)),
                                     ]))
@@ -294,7 +266,6 @@ def main_worker(gpu, ngpus_per_node, args):
                   'default use MNIST dataset!')
     dataset = datasets.MNIST(root=args.dataroot, download=True,
                              transform=transforms.Compose([
-                               transforms.Resize(64),
                                transforms.ToTensor(),
                                transforms.Normalize((0.5,), (0.5,)),
                              ]))
@@ -308,7 +279,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
   for epoch in range(args.start_epoch, args.epochs):
     # train for one epoch
-    train(dataloader, generator, discriminator, adversarial_loss, optimizerG, optimizerD, epoch, args)
+    train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, args)
 
     if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                                                 and args.rank % ngpus_per_node == 0):
@@ -317,7 +288,7 @@ def main_worker(gpu, ngpus_per_node, args):
       torch.save(discriminator.state_dict(), f"{args.outf}/netD_epoch_{epoch}.pth")
 
 
-def train(dataloader, generator, discriminator, adversarial_loss, optimizerG, optimizerD, epoch, args):
+def train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, args):
   # switch to train mode
   generator.train()
   discriminator.train()
@@ -329,14 +300,9 @@ def train(dataloader, generator, discriminator, adversarial_loss, optimizerG, op
       real_images = real_images.cuda(args.gpu, non_blocking=True)
     batch_size = real_images.size(0)
 
-    # real data label is 1, fake data label is 0.
-    real_label = torch.full((batch_size,), 1)
-    fake_label = torch.full((batch_size,), 0)
     # Sample noise as generator input
-    noise = torch.randn(batch_size, 100, 1, 1)
+    noise = torch.randn(batch_size, 100)
     if args.gpu is not None:
-      real_label = real_label.cuda(args.gpu, non_blocking=True)
-      fake_label = fake_label.cuda(args.gpu, non_blocking=True)
       noise = noise.cuda(args.gpu, non_blocking=True)
 
     ##############################################
@@ -346,7 +312,7 @@ def train(dataloader, generator, discriminator, adversarial_loss, optimizerG, op
 
     # Train with real
     real_output = discriminator(real_images)
-    errD_real = adversarial_loss(real_output, real_label)
+    errD_real = -torch.mean(real_output)
     errD_real.backward()
     D_x = real_output.mean().item()
 
@@ -355,7 +321,7 @@ def train(dataloader, generator, discriminator, adversarial_loss, optimizerG, op
 
     # Train with fake
     fake_output = discriminator(fake.detach())
-    errD_fake = adversarial_loss(fake_output, fake_label)
+    errD_fake = torch.mean(fake_output)
     errD_fake.backward()
     D_G_z1 = fake_output.mean().item()
 
@@ -364,29 +330,34 @@ def train(dataloader, generator, discriminator, adversarial_loss, optimizerG, op
     # Update D
     optimizerD.step()
 
+    # Clip weights of discriminator
+    for p in discriminator.parameters():
+      p.data.clamp_(-args.clip_value, args.clip_value)
+
     ##############################################
     # (2) Update G network: maximize log(D(G(z)))
     ##############################################
-    generator.zero_grad()
+    if i % args.n_critic == 0:
+      generator.zero_grad()
 
-    fake_output = discriminator(fake)
-    errG = adversarial_loss(fake_output, real_label)
-    errG.backward()
-    D_G_z2 = fake_output.mean().item()
-    # Update G
-    optimizerG.step()
+      fake_output = discriminator(fake)
+      errG = -torch.mean(fake_output)
+      errG.backward()
+      D_G_z2 = fake_output.mean().item()
+      # Update G
+      optimizerG.step()
 
-    print(f"[{epoch}/{args.epochs}][{i}/{len(dataloader)}] "
-          f"Loss_D: {errD.item():.4f} "
-          f"Loss_G: {errG.item():.4f} "
-          f"D_x: {D_x:.4f} "
-          f"D(G(z)): {D_G_z1:.4f} / {D_G_z2:.4f}")
+      print(f"[{epoch}/{args.epochs}][{i}/{len(dataloader)}] "
+            f"Loss_D: {errD.item():.4f} "
+            f"Loss_G: {errG.item():.4f} "
+            f"D_x: {D_x:.4f} "
+            f"D(G(z)): {D_G_z1:.4f} / {D_G_z2:.4f}")
 
     if i % args.print_freq == 0:
       vutils.save_image(real_images,
                         f"{args.outf}/real_samples.png",
                         normalize=True)
-      fixed_noise = torch.randn(args.batch_size, 100, 1, 1)
+      fixed_noise = torch.randn(args.batch_size, 100)
       if args.gpu is not None:
         fixed_noise = fixed_noise.cuda(args.gpu, non_blocking=True)
       fake = generator(fixed_noise)
@@ -400,7 +371,7 @@ def validate(model, args):
   model.eval()
 
   with torch.no_grad():
-    noise = torch.randn(args.batch_size, 100, 1, 1)
+    noise = torch.randn(args.batch_size, 100)
     if args.gpu is not None:
       noise = noise.cuda(args.gpu, non_blocking=True)
     fake = model(noise)
