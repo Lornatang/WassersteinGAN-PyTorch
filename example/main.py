@@ -63,10 +63,6 @@ parser.add_argument('-b', '--batch-size', default=64, type=int,
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', type=float, default=0.00005,
                     help='learning rate. (Default=0.00005)')
-parser.add_argument('--beta1', type=float, default=0.5,
-                    help='beta1 for adam. (Default=0.5)')
-parser.add_argument('--beta2', type=float, default=0.999,
-                    help='beta2 for adam. (Default=0.999)')
 parser.add_argument("--n_critic", type=int, default=5,
                     help="number of training steps for discriminator per iter")
 parser.add_argument("--clip_value", type=float, default=0.01,
@@ -326,7 +322,7 @@ def train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, a
     D_G_z1 = fake_output.mean().item()
 
     # Add the gradients from the all-real and all-fake batches
-    errD = errD_real + errD_fake
+    errD = -errD_real + errD_fake
     # Update D
     optimizerD.step()
 
