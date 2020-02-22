@@ -309,7 +309,6 @@ def train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, a
     # Train with real
     real_output = discriminator(real_images)
     errD_real = -torch.mean(real_output)
-    errD_real.backward()
     D_x = real_output.mean().item()
 
     # Generate fake image batch with G
@@ -318,11 +317,11 @@ def train(dataloader, generator, discriminator, optimizerG, optimizerD, epoch, a
     # Train with fake
     fake_output = discriminator(fake.detach())
     errD_fake = torch.mean(fake_output)
-    errD_fake.backward()
     D_G_z1 = fake_output.mean().item()
 
     # Add the gradients from the all-real and all-fake batches
     errD = errD_real + errD_fake
+    errD.backward()
     # Update D
     optimizerD.step()
 
