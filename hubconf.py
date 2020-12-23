@@ -23,9 +23,9 @@ from torch.hub import load_state_dict_from_url
 from wgan_pytorch.models import Generator
 
 model_urls = {
-    "mnist": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/mnist-95e6969f.pth",
-    "fashion-mnist": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/fashion_mnist-97f2093e.pth",
-    "cifar10": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/cifar10-8cbb7b63.pth"
+    "mnist": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/mnist-469fd083.pth",
+    "fashion-mnist": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/fashion_mnist-9681eda0.pth",
+    "cifar10": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/cifar10-9681eda0.pth"
 }
 
 dependencies = ["torch"]
