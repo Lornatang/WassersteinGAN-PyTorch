@@ -144,6 +144,7 @@ class Trainer(object):
                 real_output = self.discriminator(real_images)
                 errD_real = -torch.mean(real_output)
                 D_x = real_output.mean().item()
+                errD_real.backward()
 
                 # Generate fake image batch with G
                 fake_images = self.generator(noise)
@@ -152,10 +153,10 @@ class Trainer(object):
                 fake_output = self.discriminator(fake_images)
                 errD_fake = torch.mean(fake_output)
                 D_G_z1 = fake_output.mean().item()
+                errD_fake.backward()
 
                 # Add the gradients from the all-real and all-fake batches
                 errD = errD_real + errD_fake
-                errD.backward()
                 # Update D
                 self.optimizer_d.step()
 
