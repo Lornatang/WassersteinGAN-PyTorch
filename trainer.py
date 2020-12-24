@@ -118,6 +118,9 @@ class Trainer(object):
         if args.netG != "":
             self.generator.load_state_dict(torch.load(args.netG))
 
+        self.discriminator.train()
+        self.generator.train()
+
         # Start train PSNR model.
         logger.info(f"Training for {self.epochs} epochs")
 
@@ -126,47 +129,64 @@ class Trainer(object):
         for epoch in range(args.start_epoch, self.epochs):
             progress_bar = tqdm(enumerate(self.dataloader), total=len(self.dataloader))
             for i, data in progress_bar:
-                real_imgs = data[0].to(self.device)
-                batch_size = real_imgs.size(0)
+                real_images = data[0].to(self.device)
+                batch_size = real_images.size(0)
 
                 ##############################################
-                # (1) Update D network: maximize - E(hr)[1- log(D(hr, sr))] - E(sr)[log(D(sr, hr))]
+                # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
                 ##############################################
                 # Set discriminator gradients to zero.
                 self.discriminator.zero_grad()
 
                 noise = torch.randn(batch_size, 100, device=self.device)
 
-                fake_imgs = self.generator(noise)
-                errD = -torch.mean(self.discriminator(real_imgs)) + torch.mean(self.discriminator(fake_imgs.detach()))
+                # Train with real
+                real_output = self.discriminator(real_images)
+                errD_real = -torch.mean(real_output)
+                D_x = real_output.mean().item()
+
+                # Generate fake image batch with G
+                fake_images = self.generator(noise)
+
+                # Train with fake
+                fake_output = self.discriminator(fake_images)
+                errD_fake = torch.mean(fake_output)
+                D_G_z1 = fake_output.mean().item()
+
+                # Add the gradients from the all-real and all-fake batches
+                errD = errD_real + errD_fake
                 errD.backward()
+                # Update D
                 self.optimizer_d.step()
 
                 # Clip weights of discriminator
                 for p in self.discriminator.parameters():
                     p.data.clamp_(-args.clip_value, args.clip_value)
 
-                # Train the generator every n_critic iterations
+                # Train the generator every n_critic iterations.
                 if (i + 1) % args.n_critic == 0:
                     ##############################################
-                    # (2) Update G network: maximize - E(hr)[log(D(hr, sr))] - E(sr)[1- log(D(sr, hr))]
+                    # (2) Update G network: maximize log(D(G(z)))
                     ##############################################
                     # Set generator gradients to zero
                     self.generator.zero_grad()
-                    fake_imgs = self.generator(noise)
-
-                    errG = -torch.mean(self.discriminator(fake_imgs))
+                    # Generate fake image batch with G
+                    fake_images = self.generator(noise)
+                    fake_output = self.discriminator(fake_images)
+                    errG = -torch.mean(fake_output)
+                    D_G_z2 = fake_output.mean().item()
                     errG.backward()
                     self.optimizer_g.step()
 
                     progress_bar.set_description(f"[{epoch + 1}/{self.epochs}][{i + 1}/{len(self.dataloader)}] "
-                                                 f"Loss_D: {errD.item():.6f} Loss_G: {errG.item():.6f}")
+                                                 f"Loss_D: {errD.item():.6f} Loss_G: {errG.item():.6f} "
+                                                 f"D(x): {D_x:.6f} D(G(z)): {D_G_z1:.6f}/{D_G_z2:.6f}")
 
                 # The image is saved every 1 epoch.
                 if (i + 1) % args.save_freq == 0:
-                    vutils.save_image(real_imgs, os.path.join("output", "real_samples.bmp"))
-                    fake_imgs = self.generator(fixed_noise)
-                    vutils.save_image(fake_imgs.detach(), os.path.join("output", f"fake_samples{epoch + 1}.bmp"))
+                    vutils.save_image(real_images, os.path.join("output", "real_samples.bmp"))
+                    fake_images = self.generator(fixed_noise)
+                    vutils.save_image(fake_images.detach(), os.path.join("output", f"fake_samples_{epoch + 1}.bmp"))
 
             # do checkpointing
             torch.save(self.generator.state_dict(), f"weights/netG_epoch_{epoch + 1}.pth")
