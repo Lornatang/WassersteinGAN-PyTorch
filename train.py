@@ -60,8 +60,8 @@ if __name__ == "__main__":
     # training parameters
     parser.add_argument("--start-epoch", default=0, type=int, metavar="N",
                         help="manual epoch number (useful on restarts)")
-    parser.add_argument("--iters", default=1e5, type=int, metavar="N",
-                        help="The number of iterations is needed in the training of PSNR model. (default: 1e5)")
+    parser.add_argument("--iters", default=500000, type=int, metavar="N",
+                        help="The number of iterations is needed in the training of PSNR model. (default: 500000)")
     parser.add_argument("-b", "--batch-size", default=64, type=int, metavar="N",
                         help="mini-batch size (default: 64), this is the total "
                              "batch size of all GPUs on the current node when "
