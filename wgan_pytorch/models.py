@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 model_urls = {
-    "lsun": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/mnist-469fd083.pth"
+    "lsun": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/WassersteinGAN_lsun-be1a4073.pth"
 }
 
 
