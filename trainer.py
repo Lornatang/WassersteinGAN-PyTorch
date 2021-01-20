@@ -44,21 +44,40 @@ class Trainer(object):
 
         logger.info("Load training dataset")
         # Selection of appropriate treatment equipment.
-        classes = [c + "_train" for c in args.classes.split(",")]
-        dataset = torchvision.datasets.LSUN(root=args.dataroot, classes=classes,
-                                            transform=transforms.Compose([
-                                                transforms.Resize((args.image_size, args.image_size)),
-                                                transforms.CenterCrop(args.image_size),
-                                                transforms.ToTensor(),
-                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                                            ]))
+        if args.dataset in ["imagenet", "folder", "lfw"]:
+            # folder dataset
+            dataset = torchvision.datasets.ImageFolder(root=args.data,
+                                                       transform=transforms.Compose([
+                                                           transforms.Resize((args.image_size, args.image_size)),
+                                                           transforms.CenterCrop(args.image_size),
+                                                           transforms.ToTensor(),
+                                                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                       ]))
+        elif args.dataset == "lsun":
+            classes = [c + "_train" for c in args.classes.split(",")]
+            dataset = torchvision.datasets.LSUN(root=args.data, classes=classes,
+                                                transform=transforms.Compose([
+                                                    transforms.Resize((args.image_size, args.image_size)),
+                                                    transforms.CenterCrop(args.image_size),
+                                                    transforms.ToTensor(),
+                                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                ]))
+        else:
+            classes = [c + "_train" for c in args.classes.split(",")]
+            dataset = torchvision.datasets.LSUN(root=args.data, classes=classes,
+                                                transform=transforms.Compose([
+                                                    transforms.Resize((args.image_size, args.image_size)),
+                                                    transforms.CenterCrop(args.image_size),
+                                                    transforms.ToTensor(),
+                                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                ]))
         self.dataloader = torch.utils.data.DataLoader(dataset,
                                                       batch_size=args.batch_size,
                                                       pin_memory=True,
                                                       num_workers=int(args.workers))
 
         logger.info(f"Train Dataset information:\n"
-                    f"\tTrain Dataset dir is `{os.getcwd()}/{args.dataroot}`\n"
+                    f"\tTrain Dataset dir is `{os.getcwd()}/{args.data}`\n"
                     f"\tBatch size is {args.batch_size}\n"
                     f"\tWorkers is {int(args.workers)}\n"
                     f"\tLoad dataset to CUDA")
@@ -109,8 +128,8 @@ class Trainer(object):
         for epoch in range(self.start_epoch, self.epochs):
             progress_bar = tqdm(enumerate(self.dataloader), total=len(self.dataloader))
             for i, data in progress_bar:
-                real_images = data[0].to(self.device)
-                batch_size = real_images.size(0)
+                input = data[0].to(self.device)
+                batch_size = input.size(0)
 
                 ##############################################
                 # (1) Update D network: maximize log(D(x)) - log(D(G(z)))
@@ -121,7 +140,7 @@ class Trainer(object):
                 noise = torch.randn(batch_size, 100, 1, 1, device=self.device)
 
                 # Train with real
-                real_output = self.discriminator(real_images)
+                real_output = self.discriminator(input)
                 errD_real = torch.mean(real_output)
                 D_x = real_output.mean().item()
                 errD_real.backward()
@@ -165,18 +184,18 @@ class Trainer(object):
 
                 iters = i + epoch * len(self.dataloader) + 1
                 # The image is saved every 1000 epoch.
-                if iters % args.save_freq == 0:
-                    vutils.save_image(real_images,
-                                      os.path.join("output", "real_samples.bmp"),
+                if iters % 1000 == 0:
+                    vutils.save_image(input,
+                                      os.path.join("output", "real_samples.png"),
                                       normalize=True)
                     fake = self.generator(fixed_noise)
                     vutils.save_image(fake.detach(),
-                                      os.path.join("output", f"fake_samples_{iters}.bmp"),
+                                      os.path.join("output", f"fake_samples_{iters}.png"),
                                       normalize=True)
 
                     # do checkpointing
-                    torch.save(self.generator.state_dict(), f"weights/netG_iter_{iters}.pth")
-                    torch.save(self.discriminator.state_dict(), f"weights/netD_iter_{iters}.pth")
+                    torch.save(self.generator.state_dict(), f"weights/{args.arch}_G_iter_{iters}.pth")
+                    torch.save(self.discriminator.state_dict(), f"weights/{args.arch}_D_iter_{iters}.pth")
 
                 if iters == int(args.iters):  # If the iteration is reached, exit.
                     break

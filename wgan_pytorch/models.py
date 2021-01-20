@@ -51,7 +51,7 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, True),
 
-            nn.Conv2d(512, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(512, 1, 4, 1, 0),
         )
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -95,7 +95,7 @@ class Generator(nn.Module):
             nn.BatchNorm2d(64),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(64, 3, 4, 2, 1),
             nn.Tanh()
         )
 

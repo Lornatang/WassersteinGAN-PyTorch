@@ -15,15 +15,22 @@
 """File for accessing GAN via PyTorch Hub https://pytorch.org/hub/
 Usage:
     import torch
-    model = torch.hub.load("Lornatang/WassersteinGAN-PyTorch", "mnist", pretrained=True)
+    import torchvision.utils as vutils
+
+    # Choose to use the device.
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+    # Load the model into the specified device.
+    model = torch.hub.load("Lornatang/WassersteinGAN-PyTorch", "lsun", pretrained=True, progress=True, verbose=False)
+    model.eval()
+    model = model.to(device)
 """
 import torch
+from gan_pytorch.models import Generator
 from torch.hub import load_state_dict_from_url
 
-from wgan_pytorch.models import Generator
-
 model_urls = {
-    "lsun": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/mnist-469fd083.pth"
+    "lsun": "https://github.com/Lornatang/WassersteinGAN-PyTorch/releases/download/0.1.0/DCGAN_lsun-ada40795.pth"
 }
 
 dependencies = ["torch"]
@@ -42,7 +49,9 @@ def create(arch, pretrained, progress):
     """
     model = Generator()
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress, map_location=torch.device("cpu"))
+        state_dict = load_state_dict_from_url(model_urls[arch],
+                                              progress=progress,
+                                              map_location=torch.device("cpu"))
         model.load_state_dict(state_dict)
     return model
 
