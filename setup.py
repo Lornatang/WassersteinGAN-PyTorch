@@ -26,7 +26,7 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = "dcgan_pytorch"
+NAME = "wgan_pytorch"
 DESCRIPTION = "An implementation of WassersteinGAN algorithm using PyTorch framework."
 URL = "https://github.com/Lornatang/WassersteinGAN-PyTorch"
 EMAIL = "liu_changyu@dakewe.com"

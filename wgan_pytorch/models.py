@@ -29,7 +29,7 @@ class Discriminator(nn.Module):
     r""" An Discriminator model.
 
     `Generative Adversarial Networks model architecture from the One weird trick...
-    <https://arxiv.org/abs/1704.00028v3>`_ paper.
+    <https://arxiv.org/abs/1701.07875>`_ paper.
     """
 
     def __init__(self):
@@ -72,7 +72,7 @@ class Generator(nn.Module):
     r""" An Generator model.
 
     `Generative Adversarial Networks model architecture from the One weird trick...
-    <https://arxiv.org/abs/1704.00028v3>`_ paper.
+    <https://arxiv.org/abs/1701.07875>`_ paper.
     """
 
     def __init__(self):
@@ -122,7 +122,7 @@ def _gan(arch, pretrained, progress):
 
 def discriminator() -> Discriminator:
     r"""GAN model architecture from the
-    `"One weird trick..." <https://arxiv.org/abs/1704.00028v3>`_ paper.
+    `"One weird trick..." <https://arxiv.org/abs/1701.07875>`_ paper.
     """
     model = Discriminator()
     return model
@@ -130,7 +130,7 @@ def discriminator() -> Discriminator:
 
 def lsun(pretrained: bool = False, progress: bool = True) -> Generator:
     r"""GAN model architecture from the
-    `"One weird trick..." <https://arxiv.org/abs/1704.00028v3>`_ paper.
+    `"One weird trick..." <https://arxiv.org/abs/1701.07875>`_ paper.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr

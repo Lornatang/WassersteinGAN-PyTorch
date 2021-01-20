@@ -58,7 +58,7 @@ def create(arch, pretrained, progress):
 
 def lsun(pretrained: bool = False, progress: bool = True) -> Generator:
     r"""GAN model architecture from the
-    `"One weird trick..." <https://arxiv.org/abs/1701.07875v3>`_ paper.
+    `"One weird trick..." <https://arxiv.org/abs/1701.07875>`_ paper.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
